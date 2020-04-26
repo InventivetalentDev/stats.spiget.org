@@ -26,6 +26,8 @@ while ($row = $stmt->fetch()) {
             "author" => $author,
             "data"=>array()
         );
+    }else{
+        $series["$id"]["name"] = $name;
     }
     $series["$id"]["data"][]=array(
         strtotime($date)*1000,$downloads
