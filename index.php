@@ -62,6 +62,12 @@
                 })
             }
 
+            Highcharts.setOptions({
+                global: {
+                    useUTC: false
+                }
+            });
+
             function makeChart(data) {
                 Highcharts.chart("resource_stats_chart", {
                     chart: {
