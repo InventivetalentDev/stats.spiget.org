@@ -14,7 +14,7 @@ header("X-Offset: $offset");
 
 $series = [];
 
-function sortByDate($series)
+function sortByDate(&$series)
 {
     foreach ($series as $k => $v) {
         usort($series[$k]["data"], function ($a, $b) {
@@ -60,12 +60,13 @@ if ($type === "resource") {
     sortByDate($series);
 }
 
-if ($type === "author_total") {
+if ($type === "author_total" || $type === "author_average") {
     // not particularly pretty either
     $stmt = $conn->prepare("select author,date,sum(downloads) as totalDownloads from spiget_stats join (select author as aid, sum(downloads) as dd from spiget_stats group by aid order by dd desc limit ?,?) d ON spiget_stats.author IN (d.aid)  group by author,date order by totalDownloads desc, date asc");
     $stmt->bind_param("ii", $offset, $limit);
     $stmt->execute();
     $stmt->bind_result($author, $date, $downloads);
+    $authors = array();
     while ($row = $stmt->fetch()) {
         if (!isset($series["$author"])) {
             $series["$author"] = array(
@@ -73,6 +74,7 @@ if ($type === "author_total") {
                 "author" => $author,
                 "data" => array()
             );
+            $authors[]=$author;
         }
         $series["$author"]["data"][] = array(
             strtotime($date) * 1000, (int)$downloads
@@ -80,14 +82,39 @@ if ($type === "author_total") {
     }
     $stmt->close();
     unset($stmt);
+
+
+    if ($type === "author_average") {
+        // https://stackoverflow.com/a/19666312/6257838
+        $placeholders = array_fill(0, count($authors), '?');
+        $stmt = $conn->prepare("SELECT COUNT(DISTINCT id) as dcnt, author as authr from spiget_stats where author in (".implode(",",$placeholders).") group by authr order by dcnt desc");
+
+        $params = array();
+        foreach ($authors as &$a) {
+            $params[]=&$a;
+        }
+        $args = array_merge(array(str_repeat('i', count($params))), $params);
+        call_user_func_array(array($stmt, "bind_param"), $args);
+
+        $stmt->execute();
+        $stmt->bind_result($count,$author);
+        while ($row = $stmt->fetch()) {
+            if (isset($series["$author"])) {
+                foreach ($series["$author"]["data"] as &$d){
+                    $d[1] = round($d[1]/$count);
+                }
+            }
+        }
+        $stmt->close();
+        unset($stmt);
+    }
+
     $conn->close();
 
     sortByDate($series);
 }
 
-if ($type === "author_average") {
-    //TODO
-}
+
 
 header("Content-Type: application/json");
 echo json_encode(array_values($series));
