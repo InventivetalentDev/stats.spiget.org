@@ -29,16 +29,44 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     </head>
     <body>
-        <div class="container" style="height: 95vh;">
+        <div class="container" style="height: 100%;">
             <div class="row-full">
                 <div id="resource_stats_chart" style="height: 90%;">
                     Loading Stats...
                 </div>
 <br/>
                 <div style="margin: 0 auto; text-align: center; ">
-                    <button class="btn" id="prev-page" onclick="loadPrevPage()" disabled>&lt;</button>
-                    <span id="page-info">Page #1</span>
-                    <button class="btn" id="next-page" onclick="loadNextPage()">&gt;</button>
+                    <button class="btn" id="prev-page-resource" onclick="loadPrevPage('resource')" disabled>&lt;</button>
+                    <span id="page-info-resource">Page #1</span>
+                    <button class="btn" id="next-page-resource" onclick="loadNextPage('resource')">&gt;</button>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="row-full">
+                <div id="author_total_stats_chart" style="height: 90%;">
+                    Loading Stats...
+                </div>
+                <br/>
+                <div style="margin: 0 auto; text-align: center; ">
+                    <button class="btn" id="prev-page-author_total" onclick="loadPrevPage('author_total')" disabled>&lt;</button>
+                    <span id="page-info-author_total">Page #1</span>
+                    <button class="btn" id="next-page-author_total" onclick="loadNextPage('author_total')">&gt;</button>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="row-full">
+                <div id="author_average_stats_chart" style="height: 90%;">
+                    Loading Stats...
+                </div>
+                <br/>
+                <div style="margin: 0 auto; text-align: center; ">
+                    <button class="btn" id="prev-page-author_average" onclick="loadPrevPage('author_average')" disabled>&lt;</button>
+                    <span id="page-info-author_average">Page #1</span>
+                    <button class="btn" id="next-page-author_average" onclick="loadNextPage('author_average')">&gt;</button>
                 </div>
             </div>
         </div>
@@ -48,17 +76,25 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
         <script src="https://code.highcharts.com/highcharts.js"></script>
         <script>
-            let currentPage = 1;
+            let currentPage = {};
 
-            function loadPage(p = 1) {
+            function loadPage(type, p = 1) {
                 p = Math.max(1, p);
-                currentPage = p;
-                $("#prev-page").attr("disabled", currentPage <= 1)
-                $("#page-info").text("Page #" + p);
-                fetch("get.php?page=" + p).then(res => res.json()).then(data => {
+                currentPage[type] = p;
+                $("#prev-page-"+type).attr("disabled", p <= 1)
+                $("#page-info-"+type).text("Page #" + p);
+                fetch("get.php?type=" + type + "&page=" + p).then(res => res.json()).then(data => {
                     console.log(data)
-                    $("#next-page").attr("disabled", data.length < 10);
-                    makeChart(data);
+                    $("#next-page-"+type).attr("disabled", data.length < 10);
+                    if (type === "resource") {
+                        makeResourceChart(data);
+                    }
+                    if (type === "author_total") {
+                        makeAuthorTotalChart(data);
+                    }
+                    if (type === "author_average") {
+                        makeAuthorAverageChart(data);
+                    }
                 })
             }
 
@@ -68,7 +104,7 @@
                 }
             });
 
-            function makeChart(data) {
+            function makeResourceChart(data) {
                 Highcharts.chart("resource_stats_chart", {
                     chart: {
                         type: "spline"
@@ -91,20 +127,68 @@
                 })
             }
 
-            function loadNextPage() {
-                loadPage(currentPage + 1);
+            function makeAuthorTotalChart(data) {
+                Highcharts.chart("author_total_stats_chart", {
+                    chart: {
+                        type: "spline"
+                    },
+                    title: {
+                        text: "Author Download Stats"
+                    },
+                    xAxis: {
+                        type: "datetime",
+                        title: {
+                            text: "Date"
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: "Downloads"
+                        }
+                    },
+                    series: data
+                })
             }
 
-            function loadPrevPage() {
-                loadPage(currentPage - 1);
+            function makeAuthorAverageChart(data) {
+                Highcharts.chart("author_average_stats_chart", {
+                    chart: {
+                        type: "spline"
+                    },
+                    title: {
+                        text: "Author Download Stats"
+                    },
+                    xAxis: {
+                        type: "datetime",
+                        title: {
+                            text: "Date"
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: "Downloads"
+                        }
+                    },
+                    series: data
+                })
             }
 
-            function loadFirstPage() {
-                loadPage(1);
+            function loadNextPage(type) {
+                loadPage(type, (currentPage[type]||1) + 1);
+            }
+
+            function loadPrevPage(type) {
+                loadPage(type, (currentPage[type]||1) - 1);
+            }
+
+            function loadFirstPage(type) {
+                loadPage(type, 1);
             }
 
 
-            loadFirstPage();
+            loadFirstPage('resource');
+            loadFirstPage('author_total');
+            loadFirstPage('author_average');
         </script>
     </body>
 </html>
