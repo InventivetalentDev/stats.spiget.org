@@ -112,6 +112,9 @@
                     title: {
                         text: "Resource Download Stats"
                     },
+                    subtitle:{
+                      text:"Total Download Counts over Time"
+                    },
                     xAxis: {
                         type: "datetime",
                         title: {
@@ -135,6 +138,9 @@
                     title: {
                         text: "Author Download Stats"
                     },
+                    subtitle:{
+                      text:"Cumulative Download Counts per Author over Time"
+                    },
                     xAxis: {
                         type: "datetime",
                         title: {
@@ -157,6 +163,9 @@
                     },
                     title: {
                         text: "Author Download Stats"
+                    },
+                    subtitle:{
+                        text:"Average Download Counts per Author per Resource (downloads divided by resource count) over Time"
                     },
                     xAxis: {
                         type: "datetime",
