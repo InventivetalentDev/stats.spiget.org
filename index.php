@@ -34,7 +34,7 @@
                 <div id="resource_stats_chart" style="height: 90%;">
                     Loading Stats...
                 </div>
-<br/>
+                <br/>
                 <div style="margin: 0 auto; text-align: center; ">
                     <button class="btn" id="prev-page-resource" onclick="loadPrevPage('resource')" disabled>&lt;</button>
                     <span id="page-info-resource">Page #1</span>
