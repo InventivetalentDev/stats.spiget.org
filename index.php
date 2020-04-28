@@ -14,6 +14,11 @@
                 margin: 0;
             }
 
+            .container {
+                width: 95vw !important;
+                max-width: 100% !important;
+            }
+
             /* https://coderwall.com/p/hkgamw/creating-full-width-100-container-inside-fixed-width-container */
             .row-full {
                 width: 90vw;
