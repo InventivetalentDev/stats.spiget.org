@@ -35,6 +35,21 @@
     </head>
     <body>
         <div class="container" style="height: 100%;">
+            <br/>
+
+            <div class="row">
+                <div class="input-field col s12 m6">
+                    <input placeholder="Resource IDs" id="resource_filter" type="text">
+                    <label for="resource_filter">Resource Filter (comma-separated IDs)</label>
+                </div>
+                <div class="input-field col s12 m6">
+                    <input placeholder="Author IDs" id="author_filter" type="text">
+                    <label for="author_filter">Author Filter (comma-separated IDs)</label>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
             <div class="row-full">
                 <div id="resource_stats_chart" style="height: 90%;">
                     Loading Stats...
@@ -83,12 +98,28 @@
         <script>
             let currentPage = {};
 
+            let resourceFilter = "";
+            let authorFilter = "";
+
+            $("#resource_filter").on("keyup",()=>{
+                resourceFilter = $("#resource_filter").val();
+            }).on("change",()=>{
+                reloadCurrentPage("resource");
+            });
+            $("#author_filter").on("keyup",()=>{
+                authorFilter = $("#author_filter").val();
+            }).on("change",()=>{
+                reloadCurrentPage("resource");
+                reloadCurrentPage("author_total");
+                reloadCurrentPage("author_average");
+            });
+
             function loadPage(type, p = 1) {
                 p = Math.max(1, p);
                 currentPage[type] = p;
                 $("#prev-page-" + type).attr("disabled", p <= 1)
                 $("#page-info-" + type).text("Page #" + p);
-                fetch("get.php?type=" + type + "&page=" + p).then(res => res.json()).then(data => {
+                fetch("get.php?type=" + type + "&page=" + p + "&resource_filter=" + resourceFilter + "&author_filter=" + authorFilter).then(res => res.json()).then(data => {
                     console.log(data)
                     $("#next-page-" + type).attr("disabled", data.length < 10);
                     if (type === "resource") {
@@ -200,6 +231,10 @@
 
             function loadFirstPage(type) {
                 loadPage(type, 1);
+            }
+
+            function reloadCurrentPage(type) {
+                loadPage(type, currentPage[type]);
             }
 
             function resolveAuthorNamesIn(series) {

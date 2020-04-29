@@ -8,9 +8,17 @@ $offset = (max($page, 1) - 1) * $limit;
 
 $type = isset($_GET["type"]) ? $_GET["type"] : "resource";
 
+$resourceFilter = isset($_GET["resource_filter"]) ? $_GET["resource_filter"] : "";
+$resourceFilterArr = array_filter(explode(",",$resourceFilter));
+$authorFilter = isset($_GET["author_filter"]) ? $_GET["author_filter"] : "";
+$authorFilterArr = array_filter(explode(",", $authorFilter));
+
 header("X-Page: $page");
 header("X-Limit: $limit");
 header("X-Offset: $offset");
+
+header("X-Resource-Filter: " . json_encode($resourceFilterArr));
+header("X-Author-Filter: " . json_encode($authorFilterArr));
 
 $series = [];
 
@@ -31,11 +39,37 @@ function sortByDate(&$series)
 if ($type === "resource") {
     header("X-Type: resource");
 
+    $filterQuery = "";
+    if (strlen($resourceFilter) > 0) {
+        $filterQuery .= " where id in (" . implode(",", array_fill(0, count($resourceFilterArr), '?')) . ") ";
+    }
+    if (strlen($authorFilter) > 0) {
+        if (strlen($resourceFilter) > 0) {
+            $filterQuery.=" and ";
+        }else{
+            $filterQuery .= " where ";
+        }
+        $filterQuery .= " author in (" . implode(",", array_fill(0, count($authorFilterArr), '?')) . ") ";
+    }
     // this query is a bit of a mess but works
     // the inner query gets the unique resource ideas, descending by downloads
     // the outer gets all stats data based on the unique ids
-    $stmt = $conn->prepare("select id,name,author,date,downloads from spiget_stats join (select distinct id as did from spiget_stats order by downloads desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads desc, date asc");
-    $stmt->bind_param("ii", $offset, $limit);
+    $query = "select id,name,author,date,downloads from spiget_stats join (select distinct id as did from spiget_stats $filterQuery order by downloads desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads desc, date asc";
+    $stmt = $conn->prepare($query);
+
+    $params = array();
+    foreach ($resourceFilterArr as $r) {
+        $params[]= (int)$r;
+    }
+    foreach ($authorFilterArr as $a) {
+        $params[]= (int)$a;
+    }
+    $params[]=$offset;
+    $params[]=$limit;
+    $args = array_merge(array(str_repeat('i', count($params))), $params);
+    call_user_func_array(array($stmt, "bind_param"), $args);
+
+//    $stmt->bind_param("ii", $offset, $limit);
     $stmt->execute();
     $stmt->bind_result($id, $name, $author, $date, $downloads);
     while ($row = $stmt->fetch()) {
@@ -61,9 +95,24 @@ if ($type === "resource") {
 }
 
 if ($type === "author_total" || $type === "author_average") {
+    $filterQuery = "";
+    if (strlen($authorFilter) > 0) {
+        $filterQuery .= " where author in (" . implode(",", array_fill(0, count($authorFilterArr), '?')) . ") ";
+    }
+
     // not particularly pretty either
-    $stmt = $conn->prepare("select author,date,sum(downloads) as totalDownloads from spiget_stats join (select author as aid, sum(downloads) as dd from spiget_stats group by aid order by dd desc limit ?,?) d ON spiget_stats.author IN (d.aid)  group by author,date order by totalDownloads desc, date asc");
-    $stmt->bind_param("ii", $offset, $limit);
+    $stmt = $conn->prepare("select author,date,sum(downloads) as totalDownloads from spiget_stats join (select author as aid, sum(downloads) as dd from spiget_stats $filterQuery group by aid order by dd desc limit ?,?) d ON spiget_stats.author IN (d.aid)  group by author,date order by totalDownloads desc, date asc");
+
+    $params = array();
+    foreach ($authorFilterArr as $a) {
+        $params[]= (int)$a;
+    }
+    $params[]=$offset;
+    $params[]=$limit;
+    $args = array_merge(array(str_repeat('i', count($params))), $params);
+    call_user_func_array(array($stmt, "bind_param"), $args);
+
+//    $stmt->bind_param("ii", $offset, $limit);
     $stmt->execute();
     $stmt->bind_result($author, $date, $downloads);
     $authors = array();
