@@ -9,7 +9,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
 
         <style>
-            html,body{
+            html, body {
                 height: 100%;
                 margin: 0;
             }
@@ -86,11 +86,11 @@
             function loadPage(type, p = 1) {
                 p = Math.max(1, p);
                 currentPage[type] = p;
-                $("#prev-page-"+type).attr("disabled", p <= 1)
-                $("#page-info-"+type).text("Page #" + p);
+                $("#prev-page-" + type).attr("disabled", p <= 1)
+                $("#page-info-" + type).text("Page #" + p);
                 fetch("get.php?type=" + type + "&page=" + p).then(res => res.json()).then(data => {
                     console.log(data)
-                    $("#next-page-"+type).attr("disabled", data.length < 10);
+                    $("#next-page-" + type).attr("disabled", data.length < 10);
                     if (type === "resource") {
                         makeResourceChart(data);
                     }
@@ -117,8 +117,8 @@
                     title: {
                         text: "Resource Download Stats"
                     },
-                    subtitle:{
-                      text:"Total Download Counts over Time"
+                    subtitle: {
+                        text: "Total Download Counts over Time"
                     },
                     xAxis: {
                         type: "datetime",
@@ -136,6 +136,7 @@
             }
 
             function makeAuthorTotalChart(data) {
+                resolveAuthorNamesIn(data).then(()=>{
                 Highcharts.chart("author_total_stats_chart", {
                     chart: {
                         type: "spline"
@@ -143,8 +144,8 @@
                     title: {
                         text: "Author Download Stats"
                     },
-                    subtitle:{
-                      text:"Cumulative Download Counts per Author over Time"
+                    subtitle: {
+                        text: "Cumulative Download Counts per Author over Time"
                     },
                     xAxis: {
                         type: "datetime",
@@ -158,10 +159,11 @@
                         }
                     },
                     series: data
-                })
+                })})
             }
 
             function makeAuthorAverageChart(data) {
+                resolveAuthorNamesIn(data).then(()=>{
                 Highcharts.chart("author_average_stats_chart", {
                     chart: {
                         type: "spline"
@@ -169,8 +171,8 @@
                     title: {
                         text: "Author Download Stats"
                     },
-                    subtitle:{
-                        text:"Average Download Counts per Author per Resource (downloads divided by resource count) over Time"
+                    subtitle: {
+                        text: "Average Download Counts per Author per Resource (downloads divided by resource count) over Time"
                     },
                     xAxis: {
                         type: "datetime",
@@ -185,18 +187,53 @@
                     },
                     series: data
                 })
+                })
             }
 
             function loadNextPage(type) {
-                loadPage(type, (currentPage[type]||1) + 1);
+                loadPage(type, (currentPage[type] || 1) + 1);
             }
 
             function loadPrevPage(type) {
-                loadPage(type, (currentPage[type]||1) - 1);
+                loadPage(type, (currentPage[type] || 1) - 1);
             }
 
             function loadFirstPage(type) {
                 loadPage(type, 1);
+            }
+
+            function resolveAuthorNamesIn(series) {
+                return resolveAuthorNames(series).then(nameMap=>{
+                    for (let ser of series) {
+                        ser.authorName = ser.name = nameMap["" + ser.author];
+                    }
+                })
+            }
+
+            function resolveAuthorNames(series) {
+                return new Promise((resolve, reject) => {
+                    let promises = [];
+                    let ids = [];
+                    for (let ser of series) {
+                        ids.push(ser.author);
+                        promises.push(resolveAuthorName(ser.author));
+                    }
+                    Promise.all(promises).then(names => {
+                        let map = {};
+                        for (let i = 0; i < ids.length; i++) {
+                            map["" + ids[i]] = names[i];
+                        }
+                        resolve(map);
+                    }).catch(reject)
+                })
+            }
+
+            function resolveAuthorName(id) {
+                return new Promise((resolve, reject) => {
+                    fetch("https://api.spiget.org/v2/authors/" + id + "?fields=name").then(res => res.json()).then(data => {
+                        resolve(data.name);
+                    }).catch(reject);
+                })
             }
 
 
