@@ -119,6 +119,7 @@
                 currentPage[type] = p;
                 $("#prev-page-" + type).attr("disabled", p <= 1)
                 $("#page-info-" + type).text("Page #" + p);
+                $("#" + type + "_stats_chart").text("Loading Stats...");
                 fetch("get.php?type=" + type + "&page=" + p + "&resource_filter=" + resourceFilter + "&author_filter=" + authorFilter).then(res => res.json()).then(data => {
                     console.log(data)
                     $("#next-page-" + type).attr("disabled", data.length < 10);
