@@ -76,12 +76,12 @@ if ($type === "resource") {
         if (!isset($series["$id"])) {
             $series["$id"] = array(
                 "id" => $id,
-                "name" => $name,
+                "name" => "[#$id] $name",
                 "author" => $author,
                 "data" => array()
             );
         } else {
-            $series["$id"]["name"] = $name;
+            $series["$id"]["name"] =  "[#$id] $name";
         }
         $series["$id"]["data"][] = array(
             strtotime($date) * 1000, (int)$downloads
@@ -119,7 +119,7 @@ if ($type === "author_total" || $type === "author_average") {
     while ($row = $stmt->fetch()) {
         if (!isset($series["$author"])) {
             $series["$author"] = array(
-                "name" => "$author",
+                "name" => "[#$author]",
                 "author" => $author,
                 "data" => array()
             );
@@ -164,7 +164,7 @@ if ($type === "author_total" || $type === "author_average") {
 }
 
 
-
+header("Cache-Control: public, max-age=21600"); // Cache for ~6h
 header("Content-Type: application/json");
 echo json_encode(array_values($series));
 

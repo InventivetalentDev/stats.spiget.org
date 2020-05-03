@@ -241,7 +241,8 @@
             function resolveAuthorNamesIn(series) {
                 return resolveAuthorNames(series).then(nameMap=>{
                     for (let ser of series) {
-                        ser.authorName = ser.name = nameMap["" + ser.author];
+                        ser.authorName = nameMap["" + ser.author];
+                        ser.name = "[#"+ ser.author+"] "+ser.authorName;
                     }
                 })
             }
