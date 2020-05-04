@@ -65,6 +65,22 @@
             <div class="divider"></div>
 
             <div class="row-full">
+                <div id="resource_growth_stats_chart" style="height: 90%;">
+                    Loading Stats...
+                </div>
+                <br/>
+                <div style="margin: 0 auto; text-align: center; ">
+                    <button class="btn" id="prev-page-resource_growth" onclick="loadPrevPage('resource_growth')" disabled>&lt;</button>
+                    <span id="page-info-resource_growth">Page #1</span>
+                    <button class="btn" id="next-page-resource_growth" onclick="loadNextPage('resource_growth')">&gt;</button>
+                </div>
+            </div>
+
+            <br/>
+            <div class="divider"></div>
+            <br/>
+
+            <div class="row-full">
                 <div id="author_total_stats_chart" style="height: 90%;">
                     Loading Stats...
                 </div>
@@ -105,11 +121,13 @@
                 resourceFilter = $("#resource_filter").val();
             }).on("change",()=>{
                 reloadCurrentPage("resource");
+                reloadCurrentPage("resource_growth");
             });
             $("#author_filter").on("keyup",()=>{
                 authorFilter = $("#author_filter").val();
             }).on("change",()=>{
                 reloadCurrentPage("resource");
+                reloadCurrentPage("resource_growth");
                 reloadCurrentPage("author_total");
                 reloadCurrentPage("author_average");
             });
@@ -125,6 +143,9 @@
                     $("#next-page-" + type).attr("disabled", data.length < 10);
                     if (type === "resource") {
                         makeResourceChart(data);
+                    }
+                    if (type === "resource_growth") {
+                        makeResourceGrowthChart(data);
                     }
                     if (type === "author_total") {
                         makeAuthorTotalChart(data);
@@ -161,6 +182,33 @@
                     yAxis: {
                         title: {
                             text: "Downloads"
+                        }
+                    },
+                    series: data
+                })
+            }
+
+
+            function makeResourceGrowthChart(data) {
+                Highcharts.chart("resource_growth_stats_chart", {
+                    chart: {
+                        type: "spline"
+                    },
+                    title: {
+                        text: "Resource Download Growth Stats"
+                    },
+                    subtitle: {
+                        text: "Fastest Growing Download Counts over Time"
+                    },
+                    xAxis: {
+                        type: "datetime",
+                        title: {
+                            text: "Date"
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: "Downloads Increase"
                         }
                     },
                     series: data
@@ -275,6 +323,7 @@
 
 
             loadFirstPage('resource');
+            loadFirstPage('resource_growth');
             loadFirstPage('author_total');
             loadFirstPage('author_average');
         </script>

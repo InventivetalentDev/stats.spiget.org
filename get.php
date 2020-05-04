@@ -94,6 +94,67 @@ if ($type === "resource") {
     sortByDate($series);
 }
 
+if ($type === "resource_growth") {
+    header("X-Type: resource_growth");
+
+    $filterQuery = "";
+    if (strlen($resourceFilter) > 0) {
+        $filterQuery .= " where d1.id in (" . implode(",", array_fill(0, count($resourceFilterArr), '?')) . ") ";
+    }
+    if (strlen($authorFilter) > 0) {
+        if (strlen($resourceFilter) > 0) {
+            $filterQuery.=" and ";
+        }else{
+            $filterQuery .= " where ";
+        }
+        $filterQuery .= " d1.author in (" . implode(",", array_fill(0, count($authorFilterArr), '?')) . ") ";
+    }
+    // this has got to be the most ugly query so far
+    $query = "select q1.id rid, q1.name, q1.author, DATE(q1.date) dateA, DATE(q2.date) dateB, (q2.downloads-q1.downloads) as diff from spiget_stats q1
+                inner join spiget_stats q2 on q1.id=q2.id AND DATE(q1.date) + INTERVAL 1 DAY = DATE(q2.date) 
+                inner join (
+                    select distinct d1.id as did from spiget_stats d1 inner join spiget_stats d2 on d1.id=d2.id AND DATE(d1.date) + INTERVAL 1 DAY = DATE(d2.date) $filterQuery order by d1.downloads desc limit ?,? 
+                ) d on q1.id in (d.did) WHERE (q2.downloads-q1.downloads)>0 group by q1.id, DATE(q2.date) order by diff desc";
+    $stmt = $conn->prepare($query);
+
+    $params = array();
+    foreach ($resourceFilterArr as $r) {
+        $params[]= (int)$r;
+    }
+    foreach ($authorFilterArr as $a) {
+        $params[]= (int)$a;
+    }
+    $params[]=$offset;
+    $params[]=$limit;
+    $args = array_merge(array(str_repeat('i', count($params))), $params);
+    call_user_func_array(array($stmt, "bind_param"), $args);
+
+//    $stmt->bind_param("ii", $offset, $limit);
+    $stmt->execute();
+    $stmt->bind_result($id, $name, $author, $dateA, $dateB, $diff);
+    while ($row = $stmt->fetch()) {
+        if (!isset($series["$id"])) {
+            $series["$id"] = array(
+                "id" => $id,
+                "name" => "[#$id] $name",
+                "author" => $author,
+                "data" => array()
+            );
+        } else {
+            $series["$id"]["name"] =  "[#$id] $name";
+        }
+        $series["$id"]["data"][] = array(
+            strtotime($dateB) * 1000, (int)$diff
+        );
+    }
+    $stmt->close();
+    unset($stmt);
+    $conn->close();
+
+    sortByDate($series);
+}
+
+
 if ($type === "author_total" || $type === "author_average") {
     $filterQuery = "";
     if (strlen($authorFilter) > 0) {
@@ -134,6 +195,7 @@ if ($type === "author_total" || $type === "author_average") {
 
 
     if ($type === "author_average") {
+        header("X-Type: author_average");
         // https://stackoverflow.com/a/19666312/6257838
         $placeholders = array_fill(0, count($authors), '?');
         $stmt = $conn->prepare("SELECT COUNT(DISTINCT id) as dcnt, author as authr from spiget_stats where author in (".implode(",",$placeholders).") group by authr order by dcnt desc");
@@ -156,6 +218,8 @@ if ($type === "author_total" || $type === "author_average") {
         }
         $stmt->close();
         unset($stmt);
+    }else{
+        header("X-Type: author_total");
     }
 
     $conn->close();
