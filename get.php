@@ -71,7 +71,7 @@ if ($type === "resource") {
 
 //    $stmt->bind_param("ii", $offset, $limit);
     $stmt->execute();
-    $stmt->bind_result($id, $name, $author, $date, $downloads);
+    $stmt->bind_result($id, $name, $author, $date, $downloadsIncrease);
     while ($row = $stmt->fetch()) {
         if (!isset($series["$id"])) {
             $series["$id"] = array(
@@ -84,7 +84,7 @@ if ($type === "resource") {
             $series["$id"]["name"] =  "[#$id] $name";
         }
         $series["$id"]["data"][] = array(
-            strtotime($date) * 1000, (int)$downloads
+            strtotime($date) * 1000, (int)$downloadsIncrease
         );
     }
     $stmt->close();
@@ -154,6 +154,59 @@ if ($type === "resource_growth") {
     sortByDate($series);
 }
 
+if ($type === "resource_growth2") {
+    header("X-Type: resource_growth");
+
+    $filterQuery = "";
+    if (strlen($resourceFilter) > 0) {
+        $filterQuery .= " and id in (" . implode(",", array_fill(0, count($resourceFilterArr), '?')) . ") ";
+    }
+    if (strlen($authorFilter) > 0) {
+        $filterQuery .= " and author in (" . implode(",", array_fill(0, count($authorFilterArr), '?')) . ") ";
+    }
+    // this query is a bit of a mess but works
+    // the inner query gets the unique resource ideas, descending by downloads
+    // the outer gets all stats data based on the unique ids
+    $query = "select id,name,author,date,downloads_incr from spiget_stats join (select distinct id as did from spiget_stats where downloads_incr > 0  $filterQuery  order by downloads_incr desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads_incr desc, date asc";
+    $stmt = $conn->prepare($query);
+
+    $params = array();
+    foreach ($resourceFilterArr as $r) {
+        $params[]= (int)$r;
+    }
+    foreach ($authorFilterArr as $a) {
+        $params[]= (int)$a;
+    }
+    $params[]=$offset;
+    $params[]=$limit;
+    $args = array_merge(array(str_repeat('i', count($params))), $params);
+    call_user_func_array(array($stmt, "bind_param"), $args);
+
+//    $stmt->bind_param("ii", $offset, $limit);
+    $stmt->execute();
+    $stmt->bind_result($id, $name, $author, $date, $downloadsIncrease);
+    while ($row = $stmt->fetch()) {
+        if (!isset($series["$id"])) {
+            $series["$id"] = array(
+                "id" => $id,
+                "name" => "[#$id] $name",
+                "author" => $author,
+                "data" => array()
+            );
+        } else {
+            $series["$id"]["name"] =  "[#$id] $name";
+        }
+        $series["$id"]["data"][] = array(
+            strtotime($date) * 1000, (int)$downloadsIncrease
+        );
+    }
+    $stmt->close();
+    unset($stmt);
+    $conn->close();
+
+    sortByDate($series);
+}
+
 
 if ($type === "author_total" || $type === "author_average") {
     $filterQuery = "";
@@ -175,7 +228,7 @@ if ($type === "author_total" || $type === "author_average") {
 
 //    $stmt->bind_param("ii", $offset, $limit);
     $stmt->execute();
-    $stmt->bind_result($author, $date, $downloads);
+    $stmt->bind_result($author, $date, $downloadsIncrease);
     $authors = array();
     while ($row = $stmt->fetch()) {
         if (!isset($series["$author"])) {
@@ -187,7 +240,7 @@ if ($type === "author_total" || $type === "author_average") {
             $authors[]=$author;
         }
         $series["$author"]["data"][] = array(
-            strtotime($date) * 1000, (int)$downloads
+            strtotime($date) * 1000, (int)$downloadsIncrease
         );
     }
     $stmt->close();
