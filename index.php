@@ -37,6 +37,21 @@
         <div class="container" style="height: 100%;">
             <br/>
 
+            <h2>General Stats</h2>
+
+            <div class="row">
+                <div class="input-field col s12 m6">
+                    <div id="review_stats_chart" style="height: 90%;">
+                        Loading Stats...
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+            <br/>
+
+            <h2>Resource & Author Stats</h2>
+
             <div class="row">
                 <div class="input-field col s12 m6">
                     <input placeholder="Resource IDs" id="resource_filter" type="text">
@@ -153,6 +168,57 @@
                     if (type === "author_average") {
                         makeAuthorAverageChart(data);
                     }
+                })
+            }
+
+            function loadReviewStats() {
+                fetch("https://api.spiget.org/v2/reviews/trends").then(res=>res.json()).then(data=>{
+                    Highcharts.chart('review_stats_chart', {
+                        chart: {
+                            type: 'pie'
+                        },
+                        title: {
+                            text: 'Reviews by Rating'
+                        },
+                        tooltip: {
+                            pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                        },
+                        accessibility: {
+                            point: {
+                                valueSuffix: '%'
+                            }
+                        },
+                        plotOptions: {
+                            pie: {
+                                allowPointSelect: true,
+                                cursor: 'pointer',
+                                dataLabels: {
+                                    enabled: true,
+                                    format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                                }
+                            }
+                        },
+                        series: [{
+                            name: 'Ratings',
+                            colorByPoint: true,
+                            data: [{
+                                name: '5⭐',
+                                y: data["5"] / data["total"]
+                            }, {
+                                name: '4⭐',
+                                y: data["4"] / data["total"]
+                            }, {
+                                name: '3⭐',
+                                y: data["3"] / data["total"]
+                            }, {
+                                name: '2⭐',
+                                y: data["2"] / data["total"]
+                            }, {
+                                name: '1⭐',
+                                y: data["1"] / data["total"]
+                            }]
+                        }]
+                    });
                 })
             }
 
@@ -326,6 +392,8 @@
             loadFirstPage('resource_growth');
             loadFirstPage('author_total');
             loadFirstPage('author_average');
+
+            loadReviewStats();
         </script>
     </body>
 </html>
