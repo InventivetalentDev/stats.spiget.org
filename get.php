@@ -41,20 +41,15 @@ if ($type === "resource") {
 
     $filterQuery = "";
     if (strlen($resourceFilter) > 0) {
-        $filterQuery .= " where id in (" . implode(",", array_fill(0, count($resourceFilterArr), '?')) . ") ";
+        $filterQuery .= " and id in (" . implode(",", array_fill(0, count($resourceFilterArr), '?')) . ") ";
     }
     if (strlen($authorFilter) > 0) {
-        if (strlen($resourceFilter) > 0) {
-            $filterQuery.=" and ";
-        }else{
-            $filterQuery .= " where ";
-        }
-        $filterQuery .= " author in (" . implode(",", array_fill(0, count($authorFilterArr), '?')) . ") ";
+        $filterQuery .= " and author in (" . implode(",", array_fill(0, count($authorFilterArr), '?')) . ") ";
     }
     // this query is a bit of a mess but works
     // the inner query gets the unique resource ideas, descending by downloads
     // the outer gets all stats data based on the unique ids
-    $query = "select id,name,author,date,downloads from spiget_stats join (select distinct id as did from spiget_stats $filterQuery order by downloads desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads desc, date asc";
+    $query = "select id,name,author,date,downloads from spiget_stats join (select distinct id as did from spiget_stats where date > NOW() - INTERVAL 2 WEEK $filterQuery order by downloads desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads desc, date asc";
     $stmt = $conn->prepare($query);
 
     $params = array();
@@ -167,7 +162,7 @@ if ($type === "resource_growth2") {
     // this query is a bit of a mess but works
     // the inner query gets the unique resource ideas, descending by downloads
     // the outer gets all stats data based on the unique ids
-    $query = "select id,name,author,date,downloads_incr from spiget_stats join (select distinct id as did from spiget_stats where downloads_incr > 0  $filterQuery  order by downloads_incr desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads_incr desc, date asc";
+    $query = "select id,name,author,date,downloads_incr from spiget_stats join (select distinct id as did from spiget_stats where downloads_incr > 0 AND date > NOW() - INTERVAL 2 WEEK   $filterQuery  order by downloads_incr desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads_incr desc, date asc";
     $stmt = $conn->prepare($query);
 
     $params = array();
@@ -211,11 +206,11 @@ if ($type === "resource_growth2") {
 if ($type === "author_total" || $type === "author_average") {
     $filterQuery = "";
     if (strlen($authorFilter) > 0) {
-        $filterQuery .= " where author in (" . implode(",", array_fill(0, count($authorFilterArr), '?')) . ") ";
+        $filterQuery .= " and author in (" . implode(",", array_fill(0, count($authorFilterArr), '?')) . ") ";
     }
 
     // not particularly pretty either
-    $stmt = $conn->prepare("select author,date,sum(downloads) as totalDownloads from spiget_stats join (select author as aid, sum(downloads) as dd from spiget_stats $filterQuery group by aid order by dd desc limit ?,?) d ON spiget_stats.author IN (d.aid)  group by author,date order by totalDownloads desc, date asc");
+    $stmt = $conn->prepare("select author,date,sum(downloads) as totalDownloads from spiget_stats join (select author as aid, sum(downloads) as dd from spiget_stats where  date > NOW() - INTERVAL 2 WEEK  $filterQuery group by aid order by dd desc limit ?,?) d ON spiget_stats.author IN (d.aid)  group by author,date order by totalDownloads desc, date asc");
 
     $params = array();
     foreach ($authorFilterArr as $a) {
