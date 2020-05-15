@@ -49,7 +49,7 @@ if ($type === "resource") {
     // this query is a bit of a mess but works
     // the inner query gets the unique resource ideas, descending by downloads
     // the outer gets all stats data based on the unique ids
-    $query = "select id,name,author,date,downloads from spiget_stats join (select distinct id as did from spiget_stats where date > NOW() - INTERVAL 2 WEEK $filterQuery order by downloads desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads desc, date asc";
+    $query = "select id,name,author,date,downloads from spiget_stats join (select distinct id as did from spiget_stats where date > NOW() - INTERVAL 2 WEEK $filterQuery order by downloads desc limit ?,?) d ON spiget_stats.id IN (d.did) WHERE date > NOW() - INTERVAL 2 WEEK  order by downloads desc, date asc";
     $stmt = $conn->prepare($query);
 
     $params = array();
@@ -162,7 +162,7 @@ if ($type === "resource_growth2") {
     // this query is a bit of a mess but works
     // the inner query gets the unique resource ideas, descending by downloads
     // the outer gets all stats data based on the unique ids
-    $query = "select id,name,author,date,downloads_incr from spiget_stats join (select distinct id as did from spiget_stats where downloads_incr > 0 AND date > NOW() - INTERVAL 2 WEEK   $filterQuery  order by downloads_incr desc limit ?,?) d ON spiget_stats.id IN (d.did) order by downloads_incr desc, date asc";
+    $query = "select id,name,author,date,downloads_incr from spiget_stats join (select distinct id as did from spiget_stats where downloads_incr > 0 AND date > NOW() - INTERVAL 2 WEEK   $filterQuery  order by downloads_incr desc limit ?,?) d ON spiget_stats.id IN (d.did) WHERE date > NOW() - INTERVAL 2 WEEK order by downloads_incr desc, date asc";
     $stmt = $conn->prepare($query);
 
     $params = array();
@@ -210,7 +210,7 @@ if ($type === "author_total" || $type === "author_average") {
     }
 
     // not particularly pretty either
-    $stmt = $conn->prepare("select author,date,sum(downloads) as totalDownloads from spiget_stats join (select author as aid, sum(downloads) as dd from spiget_stats where  date > NOW() - INTERVAL 2 WEEK  $filterQuery group by aid order by dd desc limit ?,?) d ON spiget_stats.author IN (d.aid)  group by author,date order by totalDownloads desc, date asc");
+    $stmt = $conn->prepare("select author,date,sum(downloads) as totalDownloads from spiget_stats join (select author as aid, sum(downloads) as dd from spiget_stats where  date > NOW() - INTERVAL 2 WEEK  $filterQuery group by aid order by dd desc limit ?,?) d ON spiget_stats.author IN (d.aid) WHERE date > NOW() - INTERVAL 2 WEEK   group by author,date order by totalDownloads desc, date asc");
 
     $params = array();
     foreach ($authorFilterArr as $a) {
@@ -246,7 +246,7 @@ if ($type === "author_total" || $type === "author_average") {
         header("X-Type: author_average");
         // https://stackoverflow.com/a/19666312/6257838
         $placeholders = array_fill(0, count($authors), '?');
-        $stmt = $conn->prepare("SELECT COUNT(DISTINCT id) as dcnt, author as authr from spiget_stats where author in (".implode(",",$placeholders).") group by authr order by dcnt desc");
+        $stmt = $conn->prepare("SELECT COUNT(DISTINCT id) as dcnt, author as authr from spiget_stats where author in (".implode(",",$placeholders).") AND date > NOW() - INTERVAL 2 WEEK  group by authr order by dcnt desc");
 
         $params = array();
         foreach ($authors as &$a) {
